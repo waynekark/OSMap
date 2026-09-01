@@ -1,14 +1,21 @@
-import os
+import argparse
 import glob
 import logging
-from typing import Tuple
-import numpy as np
+import os
+from typing import Optional, Tuple
+
+import matplotlib
+
+if os.environ.get("DISPLAY", "") == "" and not os.environ.get("WAYLAND_DISPLAY"):
+    matplotlib.use("Agg")
+
 import matplotlib.pyplot as plt
-from matplotlib import cm
+import numpy as np
 
 logging.basicConfig(level=logging.INFO)
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 GRID_DIR = os.path.join(REPO_ROOT, "data", "grid")
+DEFAULT_OUTPUT = os.path.join(REPO_ROOT, "data", "plots", "elevation_3d.png")
 
 
 def parse_arc_ascii(path: str) -> np.ndarray:
@@ -17,29 +24,29 @@ def parse_arc_ascii(path: str) -> np.ndarray:
     Supports headers: ncols, nrows, xllcorner/xllcenter, yllcorner/yllcenter, cellsize, NODATA_value
     """
     header = {}
+    z_rows = []
     with open(path, "r") as f:
-        # read header lines (first 6 usually)
-        for _ in range(6):
-            line = f.readline()
-            if not line:
-                break
-            parts = line.strip().split()
-            if len(parts) >= 2:
-                key = parts[0].lower()
-                val = parts[1]
-                try:
-                    header[key] = float(val) if '.' in val or 'e' in val.lower() else int(val)
-                except ValueError:
-                    header[key] = val
-        # rewind file to start reading numeric grid after header lines consumed
-        # Collect remaining lines as z rows
-        z_rows = []
-        for line in f:
-            stripped = line.strip()
+        for raw_line in f:
+            stripped = raw_line.strip()
             if not stripped:
                 continue
-            # split and parse floats
-            z_rows.append([float(x) for x in stripped.split()])
+            parts = stripped.split()
+            if not parts:
+                continue
+
+            try:
+                float(parts[0])
+            except ValueError:
+                if len(parts) >= 2:
+                    key = parts[0].lower()
+                    val = parts[1]
+                    try:
+                        header[key] = float(val) if '.' in val or 'e' in val.lower() else int(val)
+                    except ValueError:
+                        header[key] = val
+                continue
+
+            z_rows.append([float(x) for x in parts])
 
     if not all(k in header for k in ("ncols", "nrows", "cellsize")):
         raise ValueError(f"Arc ASCII header incomplete in {path}")
@@ -189,7 +196,7 @@ def load_all_grid(grid_dir: str = GRID_DIR) -> np.ndarray:
 
 def plot_3d_scatter(points: np.ndarray, sample: int = 1, figsize: Tuple[int, int] = (12, 8),
                     title: str = "Elevation 3D Scatter", cmap: str = "terrain", s: float = 1.0,
-                    save_path: str = None) -> None:
+                    save_path: Optional[str] = None) -> None:
     """
     Plot Nx3 points as a 3D scatter. 'sample' can be >1 to downsample by taking every nth point.
     """
@@ -208,22 +215,40 @@ def plot_3d_scatter(points: np.ndarray, sample: int = 1, figsize: Tuple[int, int
     ax.set_ylabel("Y")
     ax.set_zlabel("Elevation")
     ax.set_title(title)
-    plt.colorbar(sc, ax=ax, label="Elevation")
-    plt.tight_layout()
+    fig.colorbar(sc, ax=ax, label="Elevation")
+    fig.tight_layout()
     if save_path:
-        plt.savefig(save_path, dpi=200)
+        os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)
+        fig.savefig(save_path, dpi=200)
         logging.info(f"Saved plot to {save_path}")
+        plt.close(fig)
     else:
         plt.show()
 
 
-def main():
-    pts = load_all_grid()
-    # by default downsample to at most ~200k points for plotting if very large
-    max_points = 200_000
-    sample = max(1, int(np.ceil(len(pts) / max_points)))
-    plot_3d_scatter(pts, sample=sample)
+def main(points: Optional[np.ndarray] = None, save_path: Optional[str] = None,
+         sample: Optional[int] = None, grid_dir: str = GRID_DIR, show: bool = False) -> Optional[str]:
+    if points is None:
+        points = load_all_grid(grid_dir)
+
+    if sample is None:
+        max_points = 200_000
+        sample = max(1, int(np.ceil(len(points) / max_points)))
+
+    if save_path is None and not show:
+        save_path = DEFAULT_OUTPUT
+
+    plot_3d_scatter(points, sample=sample, save_path=save_path if not show else None)
+    if show:
+        return None
+    return save_path
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Parse OS grid files and plot elevation data.")
+    parser.add_argument("--grid-dir", default=GRID_DIR, help="Directory containing grid .asc files")
+    parser.add_argument("--save-path", default=None, help="Output image path. Defaults to data/plots/elevation_3d.png")
+    parser.add_argument("--show", action="store_true", help="Display the plot interactively instead of saving a file")
+    parser.add_argument("--sample", type=int, default=None, help="Downsampling interval for large point sets")
+    args = parser.parse_args()
+    main(grid_dir=args.grid_dir, save_path=args.save_path, sample=args.sample, show=args.show)
