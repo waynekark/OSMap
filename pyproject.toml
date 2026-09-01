@@ -1,0 +1,14 @@
+[tool.poetry]
+name = "osmap"
+version = "0.1.0"
+description = "OS Terrain 50 elevation data"
+authors = ["Wayne Kark <waynekark@hotmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
