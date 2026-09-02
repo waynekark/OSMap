@@ -39,4 +39,6 @@ For Grid data, it is the .ASC files we care about (everything else can be delete
         * SD: Covers the southern portions and distinct southern valleys (including parts of Coniston, Windermere's lower basin, and the Furness fells).
         * NX: Covers a tiny fraction of the far western Cumbrian coast/outer fringe near the western lakes, though true high fells are rare here.
     * Points of Interest: 
-        * Langdale Pikes: NY20 square: NY2606 (bottom left) to NY3010 (top left)
+        * NY20 square covers Scafell Pike, Borrowdale and Langdale Pikes (but just misses Lingmoor Fell)
+            * Langdale Pikes: NY2606 (bottom left) to NY3010 (top left)
+        * Consider adding NY30, NY21, NY31
