@@ -14,8 +14,8 @@ import numpy as np
 
 logging.basicConfig(level=logging.INFO)
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-GRID_DIR = os.path.join(REPO_ROOT, "data", "grid")
-DEFAULT_OUTPUT = os.path.join(REPO_ROOT, "data", "plots", "elevation_3d.png")
+GRID_DIR = os.path.join(REPO_ROOT, "data", "process", "grid")
+DEFAULT_OUTPUT = os.path.join(REPO_ROOT, "plots", "elevation_3d.png")
 
 
 def parse_arc_ascii(path: str) -> np.ndarray:
@@ -194,11 +194,14 @@ def load_all_grid(grid_dir: str = GRID_DIR) -> np.ndarray:
     return np.vstack(all_pts)
 
 
-def plot_3d_scatter(points: np.ndarray, sample: int = 1, figsize: Tuple[int, int] = (12, 8),
+def plot_3d_scatter(points: np.ndarray, sample: int = 1, figsize: Tuple[int, int] = (12, 12),
                     title: str = "Elevation 3D Scatter", cmap: str = "terrain", s: float = 1.0,
-                    save_path: Optional[str] = None) -> None:
+                    save_path: Optional[str] = None, output_dpi: int = 600,
+                    show_axes: bool = False, show_grid: bool = True,
+                    equal_axes: bool = True) -> plt.Axes:
     """
     Plot Nx3 points as a 3D scatter. 'sample' can be >1 to downsample by taking every nth point.
+    The OS grid uses 50m spacing, so the default is to keep the 3D axes scaled equally in all dimensions.
     """
     if points.ndim != 2 or points.shape[1] < 3:
         raise ValueError("points must be Nx3 array")
@@ -216,18 +219,49 @@ def plot_3d_scatter(points: np.ndarray, sample: int = 1, figsize: Tuple[int, int
     ax.set_zlabel("Elevation")
     ax.set_title(title)
     fig.colorbar(sc, ax=ax, label="Elevation")
-    fig.tight_layout()
+
+    if equal_axes:
+        axis_ranges = (np.ptp(x), np.ptp(y), np.ptp(z))
+        ax.set_box_aspect(axis_ranges)
+
+    for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
+        axis.line.set_visible(show_axes)
+        axis._axinfo["grid"]["visible"] = show_grid
+        axis._axinfo["grid"]["linewidth"] = 0.5
+        tick_cfg = axis._axinfo["tick"]
+        tick_cfg.setdefault("linewidth", {True: 0.8, False: 0.6})
+
+    if not show_axes:
+        for axis in (ax.xaxis, ax.yaxis, ax.zaxis):
+            axis.pane.set_visible(False)
+            axis.label.set_color("none")
+            axis.set_tick_params(which="both", label1On=False, label2On=False,
+                                 size=0, width=0, colors="none")
+            tick_cfg = axis._axinfo["tick"]
+            tick_cfg["inward_factor"] = 0
+            tick_cfg["outward_factor"] = 0
+            tick_cfg["linewidth"] = {True: 0.0, False: 0.0}
+
+    try:
+        fig.tight_layout()
+    except ValueError:
+        # Matplotlib 3D axes can report an empty bounding box when all axes are hidden.
+        fig.subplots_adjust(left=0.05, right=0.98, bottom=0.05, top=0.95)
+
     if save_path:
         os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)
-        fig.savefig(save_path, dpi=200)
+        fig.savefig(save_path, dpi=output_dpi)
         logging.info(f"Saved plot to {save_path}")
         plt.close(fig)
     else:
         plt.show()
 
+    return ax
+
 
 def main(points: Optional[np.ndarray] = None, save_path: Optional[str] = None,
-         sample: Optional[int] = None, grid_dir: str = GRID_DIR, show: bool = False) -> Optional[str]:
+         sample: Optional[int] = None, grid_dir: str = GRID_DIR, show: bool = False,
+         show_axes: bool = False, show_grid: bool = True, equal_axes: bool = True) -> Optional[str]:
     if points is None:
         points = load_all_grid(grid_dir)
 
@@ -238,7 +272,14 @@ def main(points: Optional[np.ndarray] = None, save_path: Optional[str] = None,
     if save_path is None and not show:
         save_path = DEFAULT_OUTPUT
 
-    plot_3d_scatter(points, sample=sample, save_path=save_path if not show else None)
+    plot_3d_scatter(
+        points,
+        sample=sample,
+        save_path=save_path if not show else None,
+        show_axes=show_axes,
+        show_grid=show_grid,
+        equal_axes=equal_axes,
+    )
     if show:
         return None
     return save_path
@@ -250,5 +291,16 @@ if __name__ == "__main__":
     parser.add_argument("--save-path", default=None, help="Output image path. Defaults to data/plots/elevation_3d.png")
     parser.add_argument("--show", action="store_true", help="Display the plot interactively instead of saving a file")
     parser.add_argument("--sample", type=int, default=None, help="Downsampling interval for large point sets")
+    parser.add_argument("--show-axes", action="store_true", help="Display 3D axes and axis lines")
+    parser.add_argument("--hide-grid", action="store_true", help="Hide the 3D grid lines")
+    parser.add_argument("--no-equal-axes", action="store_true", help="Disable equal scaling across all 3D axes")
     args = parser.parse_args()
-    main(grid_dir=args.grid_dir, save_path=args.save_path, sample=args.sample, show=args.show)
+    main(
+        grid_dir=args.grid_dir,
+        save_path=args.save_path,
+        sample=args.sample,
+        show=args.show,
+        show_axes=args.show_axes,
+        show_grid=not args.hide_grid,
+        equal_axes=not args.no_equal_axes,
+    )
