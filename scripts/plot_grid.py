@@ -18,8 +18,10 @@ def plot_xyz(
     output: str | Path | None = None,
     title: str | None = None,
     axis_mode: str = "none",
-    show_legend: bool = True,
+    show_legend: bool = False,
     sample: int = 1,
+    elev: float = 30,
+    azim: float = -60,
 ) -> Path | None:
     """Plot XYZ points with equal metre scaling and optionally save the figure."""
     if points.ndim != 2 or points.shape[1] != 3 or points.shape[0] == 0:
@@ -32,7 +34,11 @@ def plot_xyz(
     points = points[::sample]
     figure = plt.figure(figsize=(16.54, 11.69))  # A3 landscape, inches.
     axes = figure.add_subplot(111, projection="3d")
-    scatter = axes.scatter(points[:, 0], points[:, 1], points[:, 2], c=points[:, 2], cmap="terrain", s=0.5)
+    axes.view_init(elev=elev, azim=azim)
+    scatter = axes.scatter(
+        points[:, 0], points[:, 1], points[:, 2],
+        c=points[:, 2], cmap="terrain", s=1, marker=".", linewidths=0,
+    )
     ranges = np.ptp(points, axis=0)
     ranges[ranges == 0] = 1
     axes.set_box_aspect(ranges)
@@ -46,10 +52,18 @@ def plot_xyz(
         axes.set_ylabel("Northing (m)")
         axes.set_zlabel("")
 
-    for axis in (axes.xaxis, axes.yaxis, axes.zaxis):
-        visible = axis_mode == "all" or (axis_mode == "xy" and axis in (axes.xaxis, axes.yaxis))
-        axis.set_visible(visible)
-        axis._axinfo["grid"]["visible"] = visible
+    axes.grid(False)
+    if axis_mode == "none":
+        axes.set_axis_off()
+        for axis in (axes.xaxis, axes.yaxis, axes.zaxis):
+            axis.set_visible(False)
+            axis._axinfo["grid"]["visible"] = False
+            axis.pane.set_visible(False)
+    else:
+        for axis in (axes.xaxis, axes.yaxis, axes.zaxis):
+            visible = axis_mode == "all" or axis in (axes.xaxis, axes.yaxis)
+            axis.set_visible(visible)
+            axis._axinfo["grid"]["visible"] = visible
     if title is not None:
         axes.set_title(title)
     if show_legend:
@@ -70,10 +84,17 @@ def main() -> None:
     parser.add_argument("-o", "--output", type=Path)
     parser.add_argument("--title")
     parser.add_argument("--axis-mode", choices=("none", "xy", "all"), default="none")
-    parser.add_argument("--hide-legend", action="store_true")
+    legend_options = parser.add_mutually_exclusive_group()
+    legend_options.add_argument("--show-legend", action="store_true")
+    legend_options.add_argument("--hide-legend", action="store_true")
     parser.add_argument("--sample", type=int, default=1)
+    parser.add_argument("--elev", type=float, default=30, help="Camera elevation angle in degrees")
+    parser.add_argument("--azim", type=float, default=-60, help="Camera azimuth angle in degrees")
     args = parser.parse_args()
-    output = plot_xyz(np.load(args.input), args.output, args.title, args.axis_mode, not args.hide_legend, args.sample)
+    output = plot_xyz(
+        np.load(args.input), args.output, args.title, args.axis_mode,
+        args.show_legend, args.sample, args.elev, args.azim,
+    )
     print(output)
 
 

@@ -22,7 +22,8 @@ Data is provided for the UK in 10km x 10km tiles with data points given at 50m i
 * Coordinates: Coordinates mark the centre of each cell rather than its corner, ordered in row-major sequence (x easting within y northing).
 
 ### Data Formats
-* Grid Data: Provided as text-based ASCII grid files paired with GML metadata files defining the spatial reference system and cell spacing.
+* Grid Data: Provided as text-based ASCII grid files paired with GML metadata files defining the spatial reference system and cell spacing. 
+    * Arc ASCII rows are north-to-south, so returned points should reverse the Y coordinate order while keeping XYZ in metres.
 * Contour Data: Supplied as vector datasets featuring 10-metre vertical interval standard contour polylines, spot heights, and mean high/low water boundaries.
 
 ## Notes
