@@ -7,10 +7,10 @@ Ordnance Survey Terrain 50 (https://osdatahub.os.uk/data/downloads/open/Terrain5
 * Apply boundaries to data to allow defined areas to be analysed
 * Plot data to produce visualisations of the elevation data using matplotlib:
     * 3D scatter plots
+    * 3D wireframe plot
     * Contour maps (2D, 3D and filled 3D)
     * Custom hillshading
     * Fill under 3D line graphs
-    * 3D wireframe plot
     * 3D stem
 
 ## Data Format
@@ -28,17 +28,22 @@ Data is provided for the UK in 10km x 10km tiles with data points given at 50m i
 
 ## Notes
 To recursively unzip the downloaded files, use the following 
-find . -name "*.zip" -exec unzip {} \;
+``` find . -name "*.zip" -exec unzip {} \; ```
 This unzips recursive folders in the working directory to the working directory
 For Grid data, it is the .ASC files we care about (everything else can be deleted)
 
 ## Grid References for Points of Interest
 * Lake District:
     * Main Map Tiles:
-        *NY: Covers the vast majority of the northern, central, and eastern Lake District (including Keswick, Grasmere, Helvellyn, and Skiddaw).
+        * NY: Covers the vast majority of the northern, central, and eastern Lake District (including Keswick, Grasmere, Helvellyn, and Skiddaw).
         * SD: Covers the southern portions and distinct southern valleys (including parts of Coniston, Windermere's lower basin, and the Furness fells).
         * NX: Covers a tiny fraction of the far western Cumbrian coast/outer fringe near the western lakes, though true high fells are rare here.
+        * SD06 (bottom left) to NY54 (top left) + Small area of NX90 to NX94
     * Points of Interest: 
         * NY20 square covers Scafell Pike, Borrowdale and Langdale Pikes (but just misses Lingmoor Fell)
             * Langdale Pikes: NY2606 (bottom left) to NY3010 (top left)
-        * Consider adding NY30, NY21, NY31
+            * Adding NY30, NY21, NY31 puts Langdales in the centre of the square
+* Scotland:
+    * Main Map Tiles:
+        * Scottish mainland: NA to NU (extends down to bottom of Kintyre peninsula, misses small area of the borders)
+        * Add HP to HZ to include Orkney and northern isles

@@ -19,7 +19,9 @@ except ImportError:
 
 
 def main() -> None:
-    points = load_ascii_grids(Path("data/process/grid"))
+    folder = input("Folder name [process/grid]: ").strip() or "process"
+    points = load_ascii_grids(Path("data/"+folder))
+
     plotters = {
         "1": ("2D contour", plot_contour_2d),
         "2": ("3D contour", plot_contour_3d),

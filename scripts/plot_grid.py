@@ -23,8 +23,8 @@ class PlotSettings:
     show_legend: bool = False
     scaling: str = "equal"
     elevation: float = 30
-    azimuth: float = -80    # -90 results in a north-south oriented map
-    cmap: str = "terrain"
+    azimuth: float = -90    # -90 results in a north-south oriented map
+    cmap: str = "gist_earth"    # https://matplotlib.org/stable/users/explain/colors/colormaps.html
     dpi: int = 600
     figsize: tuple[float, float] = (16.54, 11.69)
 
@@ -87,12 +87,12 @@ def _validate(points: np.ndarray) -> None:
         raise ValueError("points must be a non-empty (N, 3) numpy array")
 
 
-def plot_contour_2d(points: np.ndarray, output=None, title=None, settings=None, levels=20):
+def plot_contour_2d(points: np.ndarray, output=None, title=None, settings=None, levels=20, linewidths=0.15):
     _validate(points)
     settings = settings or PlotSettings()
     (x_grid, y_grid), z_grid = _grid(points)
     figure, axes = _figure(settings, three_dimensional=False)
-    contour = axes.contour(x_grid, y_grid, z_grid, levels=levels, cmap=settings.cmap)
+    contour = axes.contour(x_grid, y_grid, z_grid, levels=levels, cmap=settings.cmap, linewidths=linewidths)
     if title is not None:
         axes.set_title(title)
     if settings.show_legend:
@@ -101,7 +101,7 @@ def plot_contour_2d(points: np.ndarray, output=None, title=None, settings=None, 
     return _save(figure, output, settings, "contour_2d")
 
 
-def plot_contour_3d(points: np.ndarray, output=None, title=None, settings=None, levels=20, linewidths=0.25):
+def plot_contour_3d(points: np.ndarray, output=None, title=None, settings=None, levels=20, linewidths=0.1):
     _validate(points)
     settings = settings or PlotSettings()
     (x_grid, y_grid), z_grid = _grid(points)
