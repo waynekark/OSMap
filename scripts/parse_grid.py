@@ -8,8 +8,11 @@ from pathlib import Path
 import numpy as np
 
 
-def parse_ascii_grid(path: str | Path) -> np.ndarray:
-    """Return an ``(N, 3)`` array of ``(easting, northing, elevation)`` metres."""
+def parse_ascii_grid(path: str | Path, ground_level: float | None = None) -> np.ndarray:
+    """Return an ``(N, 3)`` array of ``(easting, northing, elevation)`` metres.
+
+    When *ground_level* is provided, points below that elevation are discarded.
+    """
     path = Path(path)
     header: dict[str, float] = {}
     values: list[float] = []
@@ -60,23 +63,34 @@ def parse_ascii_grid(path: str | Path) -> np.ndarray:
     nodata = header.get("nodata_value")
     if nodata is not None:
         points = points[~np.isclose(points[:, 2], nodata)]
+    if ground_level is not None:
+        points = points[points[:, 2] >= ground_level]
     return points
 
 
-def load_ascii_grids(folder: str | Path) -> np.ndarray:
-    """Parse and combine every ``.asc`` file in *folder*, in filename order."""
+def load_ascii_grids(folder: str | Path, ground_level: float | None = None) -> np.ndarray:
+    """Parse and combine every ``.asc`` file in *folder*, in filename order.
+
+    When *ground_level* is provided, values below it are omitted from the returned data.
+    """
     files = sorted(Path(folder).glob("*.asc"))
     if not files:
         raise FileNotFoundError(f"No .asc files found in {folder}")
-    return np.vstack([parse_ascii_grid(path) for path in files])
+    return np.vstack([parse_ascii_grid(path, ground_level=ground_level) for path in files])
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("folder", type=Path, nargs="?", default=Path("data/process/grid"))
     parser.add_argument("-o", "--output", type=Path, help="Optional .npy output path")
+    parser.add_argument(
+        "--ground-level",
+        type=float,
+        default=None,
+        help="Ignore elevation values below this ground level in metres.",
+    )
     args = parser.parse_args()
-    points = load_ascii_grids(args.folder)
+    points = load_ascii_grids(args.folder, ground_level=args.ground_level)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         np.save(args.output, points)
